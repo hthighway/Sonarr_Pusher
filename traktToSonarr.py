@@ -2,11 +2,11 @@ import json
 import requests
 
 ################ config ################
-traktAPI = '7c412aec89fe8304b8d5529c58a825a8188864b660bcfd36322b3d78f97d17be'  # API from your trakt account
-sonarrAPI = 'b44d4cf55651455f8ea27cd7b1b8ef52'  # API from your sonarr install
+traktAPI = ''  # API from your trakt account
+sonarrAPI = ''  # API from your sonarr install
 traktType = 'shows'  # shows or movies
 listName = 'anticipated'  # trending, popular or anticipated
-sonarr = 'http://sonarr:8989'  # url to sonarr install, normaly localhost:8989
+sonarr = 'http://localhost:8989'  # url to sonarr install, normaly localhost:8989
 ########################################
 
 # sonarrUrl = sonarr + '/api/series' + '?apikey=' + sonarrAPI
