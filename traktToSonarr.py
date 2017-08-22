@@ -32,7 +32,7 @@ def getJson():
 
 def sendToSonarr():
     '''send found tv program to sonarr'''
-    requests.post(sonarr + '/api/series', headers=sonarrHeaders,
+    requests.post(sonarr + '/api/series', headers=sonarrHeaders,)
                   data={'tvdbId': tvdbId, 'title': title, 'qualityProfileId': '', 'titleSlug': slug, 'images': '',
                         'seasons': ''})
 
