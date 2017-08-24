@@ -1,3 +1,2 @@
 # traktToSonarr
-Automatically push TV shows from Trakt's list, e.g. Anticipated, to Sonarr
-***DO NOT USE***
+Automatically push TV shows from Trakt's website, e.g. Anticipated/Popular shows, to Sonarr
