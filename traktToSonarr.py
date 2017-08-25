@@ -1,3 +1,9 @@
+# TODO Add config for debug level
+# TODO Merge trakt type lists into one global list based on config options
+# TODO Merge in slack notifcation support
+# TODO Add log rotate
+# TODO Add user response based config generation on first run (low priority)
+
 import json
 import requests
 import time
@@ -8,45 +14,84 @@ import sys
 # config
 ################################
 
-timer = 24  # how often (in hours) to check for new shows and add them
+timer = 0  # how often (in hours) to check for new shows and add them - use 0 to only check once
 traktAPI = ''  # API from your trakt account
 sonarrAPI = ''  # API from your sonarr install
 traktLimit = '100'  # how many results to request from trakt's list
 listName = 'trending'  # Trending or anticipated
 sonarr = 'http://localhost:8989'  # URL to sonarr install, normally localhost:8989
 quality_profile = ''  # Sonarr quality profile to add shows under
-folder_path = ''  # Root folder to download tv shows into
+folder_path = ''  # root folder to download tv shows into
+add_limit = 5  # limit the number of shows to add per cycle, use 0 for no limit
 
+# Optional pushover notifications
 pushover_user_token = ''
 pushover_app_token = ''
+
+# Optional Slack Webhook Integration
+
+slack_webhook_url = ''  # https://hooks.slack.com/services/XXXXXXXX/XXXXXXXX/XXXXXXXXXXXXXXXXXX
+slack_user = 'incoming message user name'  # can be anything you like
+slack_channel = 'name_of_slack_channel'  # can be anything you like (sonarr_pusher)
+
+# Optional tvdb extra filter
+
+tvdb_api = ''  # tvdb api key
+
+allow_ended = True  # allow the adding of ended shows
 
 # Optional filters
 tRatings = ''  # Only return results which have Trakt ratings within set range, e.g. 70-100
 tGenres = ''  # Only return results within specified genres, e.g. action, adventure, comedy
-tLang = 'en'  # Only return results in set language, e.g en or es
+tLang = ''  # Only return results in set language, e.g en or es
 tYears = ''  # Only return results from year, or year range, e.g. 2007 or 2007-2015
 tCountries = ''  # Only return results from country, e.g. us
-tRuntimes = '30-60'  # Only return results where shows have a runtime within range, e.g. 30-60
+tRuntimes = ''  # Only return results where shows have a runtime within range, e.g. 30-60
 
 ################################
 # setup
 ################################
 
 logging.basicConfig(stream=sys.stdout, format='%(asctime)s - %(levelname)s: %(message)s', filename='sonarrPush.log',
-                    level=logging.INFO)
-sonarrHeaders = {'X-Api-Key': sonarrAPI}
-pushHeaders = {'Content-Type": "application/x-www-form-urlencoded', 'Content-Length: 180'}
-traktHeaders = {'content-type': 'application/json', 'trakt-api-version': '2', 'trakt-api-key': traktAPI, }
-options = {"ignoreEpisodesWithFiles": False, "ignoreEpisodesWithoutFiles": False, "searchForMissingEpisodes": True}
+                    level=logging.DEBUG)
 sent = None
 newShows = []
 delay_time = timer * 3600
+sonarrHeaders = {'X-Api-Key': sonarrAPI}
+traktHeaders = {'content-type': 'application/json', 'trakt-api-version': '2', 'trakt-api-key': traktAPI, }
+options = {"ignoreEpisodesWithFiles": False, "ignoreEpisodesWithoutFiles": False, "searchForMissingEpisodes": True}
+tvLibList = []
+traktList = []
+num = 0
+
 
 ################################
 # Main
 ################################
 
+
+def get_tvdb_token():
+    """grab token for tvdb api auth"""
+    x = {"apikey": "A9FD3F7467C44BB8"}
+    r = requests.post('https://api.thetvdb.com/login', headers={'Content-Type': 'application/json'}, data=json.dumps(x))
+    token = r.json()
+    token = token['token']
+    resp = r.status_code
+    return token if resp == 200 else logging.warning('tvdb auth failed, check api key')
+
+
+def tvdb_status(tvdb_id):
+    """check if a tv show is still being aired"""
+    url = 'https://api.thetvdb.com//series/' + str(tvdb_id)
+    header = {"Accept": "application/json", "Authorization": "Bearer " + get_tvdb_token(), }
+    r = requests.post(url, headers=header)
+    output = r.json()
+    logging.debug('checked tvdb if show is still airing, status code: ' + str(r.status_code))
+    return True if 'Ended' in output['data']['status'] else logging.info('Show is still being aired, continue to add')
+
+
 def send_pushover(app_token, user_token, message):
+    """Send message to pushover client"""
     try:
         payload = {'token': app_token, 'user': user_token, 'title': 'Sonarr Push', 'message': message}
         r = requests.post('https://api.pushover.net/1/messages.json', data=payload, headers={'User-Agent': 'Python'})
@@ -57,21 +102,23 @@ def send_pushover(app_token, user_token, message):
         logging.warning("error sending notification to %r", user_token)
         return False
 
+
 def trakt_url():
-    turl = "https://api.trakt.tv" + "/shows/%s/?limit=%s" % (listName.lower(), traktLimit)
+    """Generate the url for trakt api with filters as needed"""
+    url = "https://api.trakt.tv" + "/shows/%s/?limit=%s" % (listName.lower(), traktLimit)
     if tRatings:
-        turl += '&ratings=' + tRatings
+        url += '&ratings=' + tRatings
     if tGenres:
-        turl += '&genres=' + tGenres.lower()
+        url += '&genres=' + tGenres.lower()
     if tLang:
-        turl += '&languages=' + tLang.lower()
+        url += '&languages=' + tLang.lower()
     if tYears:
-        turl += '&years=' + tYears.lower()
+        url += '&years=' + tYears.lower()
     if tCountries:
-        turl += '&countries=' + tCountries.lower()
+        url += '&countries=' + tCountries.lower()
     if tRuntimes:
-        turl += '&runtimes=' + tRuntimes
-    return turl
+        url += '&runtimes=' + tRuntimes
+    return url
 
 
 def qprofile_lookup():
@@ -79,7 +126,7 @@ def qprofile_lookup():
     r = requests.get(sonarr + '/api/profile', headers=sonarrHeaders)
     qprofile_id = r.json()
     x = 0
-    for l in qprofile_id:
+    for _ in qprofile_id:
         if qprofile_id[x]['name'].lower() == quality_profile.lower():
             return qprofile_id[x]['id']
         else:
@@ -90,7 +137,6 @@ def sonarr_lib():
     """get sonarr library in a list of tvdbid ids"""
     r = requests.get(sonarr + '/api/series', headers=sonarrHeaders)
     global tvLibList
-    tvLibList = []
     tv_lib_raw = r.json()
     for n in tv_lib_raw:
         tvLibList.append(n['tvdbId'])
@@ -104,34 +150,54 @@ def get_trakt():
     traktList = []
     if r.status_code == requests.codes.ok:
         traktList = r.json()
+        logging.debug('got trakt list successfully')
         return True
     else:
         logging.error('Trakt list request failed, is trakt.tv down?')
+        logging.debug('failed to get trakt list, code return: ' + r.status_code)
         return False
 
 
 def send_to_sonarr(a, b):
     """send found tv program to sonarr"""
-    payload = {"tvdbId": a, "title": b, "qualityProfileId": qprofile_lookup(), "seasons": [],
-               "seasonFolder": True, "rootFolderPath": folder_path, "addOptions": options, "images": []}
+    payload = {"tvdbId": a, "title": b, "qualityProfileId": qprofile_lookup(), "seasons": [], "seasonFolder": True,
+               "rootFolderPath": folder_path, "addOptions": options, "images": []}
     r = requests.post(sonarr + '/api/series', headers=sonarrHeaders, data=json.dumps(payload))
     global sent
     sent = payload
     if r.status_code == 201:
         sent = True
+        logging.debug('sent to sonarr successfully')
     else:
         sent = False
+        logging.debug('failed to send to sonarr, code return: ' + r.status_code)
     return sent
+
+
+def num_to_add():
+    """Return how many shows are to be added outside of limit"""
+    n = 0
+    for x in traktList:
+        if x['show']['ids']['tvdb'] not in tvLibList and allow_ended:
+            n += 1
+        elif x['show']['ids']['tvdb'] not in tvLibList and tvdb_status(x['show']['ids']['tvdb']):
+            n += 1
+    global num
+    num = n
+    return n
 
 
 def add_shows():
     """Check new shows & add missing"""
     get_trakt()
     sonarr_lib()
+    num_to_add()
     n = 0
     added_list = []
+    global add_limit
+    y = add_limit
     for x in traktList:
-        if x['show']['ids']['tvdb'] not in tvLibList:
+        if x['show']['ids']['tvdb'] not in tvLibList and allow_ended:
             title = x['show']['title']
             tvdb = x['show']['ids']['tvdb']
             try:
@@ -141,15 +207,43 @@ def add_shows():
                     logging.info(title + ' has been added to Sonarr')
                     n += 1
                     added_list.append(x['show']['title'])
-
+                    if 0 < y == n:
+                        logging.info(str(n) + ' shows added limit reached')
+                        break
+                    elif y > 0 and not n == y:
+                        logging.debug('limit not yet reached: ' + str(n))
                 else:
                     logging.warning(title + ' failed to be added to Sonarr!')
             except:
-                logging.warning('error sending show: ' + title + ' tvdbid: ' + tvdb)
-    if pushover_app_token and pushover_user_token:
-        send_pushover(pushover_app_token, pushover_user_token,
-                      "The following " + str(n) + " TV Show(s) have been added to Sonarr: " + '\n' + '\n'.join(added_list))
-
+                logging.warning('error sending show: ' + title + ' tvdbid: ' + str(tvdb))
+        elif x['show']['ids']['tvdb'] not in tvLibList and not tvdb_status(x['show']['ids']['tvdb']):
+            title = x['show']['title']
+            tvdb = x['show']['ids']['tvdb']
+            logging.debug('adding shows if not ended ' + title + ' ' + str(tvdb_status(x['show']['ids']['tvdb'])))
+            try:
+                logging.info('send show to sonarr: ' + x['show']['title'])
+                send_to_sonarr(tvdb, title)
+                if sent:
+                    logging.info(title + ' has been added to Sonarr')
+                    n += 1
+                    added_list.append(x['show']['title'])
+                    if 0 < y == n:
+                        logging.info(str(n) + ' shows added limit reached')
+                        break
+                    elif y > 0 and not n == y:
+                        logging.debug('limit not yet reached: ' + str(n))
+                else:
+                    logging.warning(title + ' failed to be added to Sonarr!')
+            except:
+                logging.warning('error sending show: ' + title + ' tvdbid: ' + str(tvdb))
+    if pushover_app_token and pushover_user_token and n != 0:
+        send_pushover(pushover_app_token, pushover_user_token, "The following " + str(n) + " TV Show(s) out of " + str(
+            num) + " have been added to Sonarr: " + '\n' + '\n'.join(added_list))
+    if slack_webhook_url and n != 0:
+        slack_data = "The following " + str(n) + " TV Show(s) out of " + str(
+            num) + " have been added to Sonarr: " + '\n' + '\n'.join(added_list)
+        payload = {"text": slack_data, "username": slack_user, "channel": slack_channel}
+        requests.post(slack_webhook_url, json.dumps(payload), headers={'content-type': 'application/json'})
 
 def new_check():
     """check for new trakt items in list"""
@@ -158,14 +252,22 @@ def new_check():
     logging.info('checking for new shows in Trakt list')
     for x in traktList:
         logging.debug('checking show from list: ' + x['show']['title'])
-        if x['show']['ids']['tvdb'] not in tvLibList:
+        if x['show']['ids']['tvdb'] not in tvLibList and allow_ended:
             logging.info('new show(s) found, adding shows now')
             add_shows()
             break
-    logging.info('no new shows to add, checking again in ' + str(timer) + ' hour(s)')
-    time.sleep(float(delay_time))
-    logging.debug('sleping for ' + str(delay_time) + ' seconds')
-    new_check()
-    logging.debug('sleep over, checking again')
+        elif x['show']['ids']['tvdb'] not in tvLibList and not tvdb_status(x['show']['ids']['tvdb']):
+            logging.info('new continuing show(s) found, adding shows now')
+            add_shows()
+            break
+    if timer != 0:
+        logging.info('no new shows to add, checking again in ' + str(timer) + ' hour(s)')
+        logging.debug('sleping for ' + str(delay_time) + ' seconds')
+        time.sleep(float(delay_time))
+        logging.debug('sleep over, checking again')
+        new_check()
+    else:
+        logging.info('nothing left to add, shutting down')
+        sys.exit()
 
 new_check()
