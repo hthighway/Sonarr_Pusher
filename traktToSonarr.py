@@ -84,20 +84,20 @@ def send_pushover(app_token, user_token, message):
         return False
 
 def trakt_url():
-    turl = "https://api.trakt.tv" + "/shows/%s/?limit=%s" % (listName.lower(), traktLimit)
+    url = "https://api.trakt.tv" + "/shows/%s/?limit=%s" % (listName.lower(), traktLimit)
     if tRatings:
-        turl += '&ratings=' + tRatings
+        url += '&ratings=' + tRatings
     if tGenres:
-        turl += '&genres=' + tGenres.lower()
+        url += '&genres=' + tGenres.lower()
     if tLang:
-        turl += '&languages=' + tLang.lower()
+        url += '&languages=' + tLang.lower()
     if tYears:
-        turl += '&years=' + tYears.lower()
+        url += '&years=' + tYears.lower()
     if tCountries:
-        turl += '&countries=' + tCountries.lower()
+        url += '&countries=' + tCountries.lower()
     if tRuntimes:
-        turl += '&runtimes=' + tRuntimes
-    return turl
+        url += '&runtimes=' + tRuntimes
+    return url
 
 
 def qprofile_lookup():
