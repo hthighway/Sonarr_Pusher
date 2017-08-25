@@ -1,28 +1,28 @@
 # Sonarr Pusher
-Python script that checks certain lists on http://trakt.tv, and if they meet your configured filters, adds them to your sonarr library. Sonarr Pusher will check the trakt.tv lists every 24 hours by default to keep sonarr constaly updated with new TV shows
+Python script that checks certain lists on [Trakt](http://trakt.tv), and if they meet your configured filters, adds them to your sonarr library. Sonarr Pusher will check the trakt.tv lists every 24 hours by default to keep sonarr constaly updated with new TV shows
 
 Currently only supports:
-[Trakt trending](https://trakt.tv/shows/trending)
-[Trakt anticipated](https://trakt.tv/shows/anticipated)
+1. [Trakt trending](https://trakt.tv/shows/trending)
+2. [Trakt anticipated](https://trakt.tv/shows/anticipated)
 
 ## Getting Started
 
-You will need a trakt.tv account with an api key [Trakt api](https://trakt.tv/oauth/applications/new), as well as your sonarr API.
+You will need a trakt.tv account with a [Trakt api key](https://trakt.tv/oauth/applications/new), as well as your sonarr API.
 
-Quick warning when setting up the script. If you set `traktLimit` to a large number (above 100) with no filters, you will get that amount of shows added. At minium it is reconmended to use the language code filter.
+Quick warning when setting up the script. If you set `traktLimit` to a large number (above `100`) with no filters, you will get that amount of shows added. At minium it is reconmended to use the language code filter.
 
 ### Prerequisites
 
-Python 2.7
-requests 2.18.4
+1. Python 2.7
+2. requests 2.18.4
 
-```
+`
 sudo apt-get install python
-```
+`
 
-```
+`
 pip install requests
-```
+`
 
 ### Installing
 
@@ -44,8 +44,8 @@ sonarr = 'http://localhost:8989'  # URL to sonarr install, normally localhost:89
 quality_profile = ''  # Sonarr quality profile to add shows under
 folder_path = ''  # Root folder to download tv shows into
 
-pushover_user_token = ''
-pushover_app_token = ''
+pushover_user_token = '' # Pushover user token
+pushover_app_token = '' # Pushover app token
 
 # Optional filters
 tRatings = ''  # Only return results which have Trakt ratings within set range, e.g. 70-100
@@ -56,9 +56,11 @@ tCountries = ''  # Only return results from country, e.g. us
 tRuntimes = '30-60'  # Only return results where shows have a runtime within range, e.g. 30-60
 ```
 
+Then to run, simply run:
+
 `python traktToSonarr.py`
 
-If you intend to leave it running, would be best to use systemd startup or screen.
+If you intend to leave it running, it would be best to use systemd startup or screen.
 
 `screen -S SonarrPusher python traktToSonarr.py`
 
