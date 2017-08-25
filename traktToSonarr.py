@@ -42,6 +42,9 @@ sent = None
 newShows = []
 delay_time = timer * 3600
 
+################################
+# Main
+################################
 
 def send_pushover(app_token, user_token, message):
     try:
@@ -145,7 +148,7 @@ def add_shows():
                 logging.warning('error sending show: ' + title + ' tvdbid: ' + tvdb)
     if pushover_app_token and pushover_user_token:
         send_pushover(pushover_app_token, pushover_user_token,
-                      "The following " + str(n) + " TV Show(s) have been added to Sonarr: " + '\n'.join(added_list))
+                      "The following " + str(n) + " TV Show(s) have been added to Sonarr: " + '\n' + '\n'.join(added_list))
 
 
 def new_check():
