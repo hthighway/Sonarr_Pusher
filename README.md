@@ -7,7 +7,9 @@ Currently only supports:
 
 ## Getting Started
 
-to run just 
+You will need a trakt.tv account with an api key [Trakt api](https://trakt.tv/oauth/applications/new), as well as your sonarr API.
+
+Quick warning when setting up the script. If you set `traktLimit` to a large number (above 100) with no filters, you will get that amount of shows added. At minium it is reconmended to use the language code filter.
 
 ### Prerequisites
 
