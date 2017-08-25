@@ -11,17 +11,26 @@ import sys
 timer = 24  # how often (in hours) to check for new shows and add them
 traktAPI = ''  # API from your trakt account
 sonarrAPI = ''  # API from your sonarr install
-traktLimit = '100'  # how many results to request from trakt's list
-listName = 'trending'  # Trending or anticipated
+traktLimit = ''  # how many results to request from trakt's list
+listName = ''  # Trending or anticipated
 sonarr = 'http://localhost:8989'  # URL to sonarr install, normally localhost:8989
 quality_profile = ''  # Sonarr quality profile to add shows under
-folder_path = ''  # Root folder to download tv shows into
+folder_path = ''  # root folder to download tv shows into
+debug_level = 'info' # level of debugging for logs: info, debug, warning and error
+add_limit = 0 # limit the number of shows to add per cycle, use 0 for no limit
 
+# Optional pushover notifications
 pushover_user_token = ''
 pushover_app_token = ''
 
+# Optional tvdb extra filter
+
+tvdb_api = '' # tvdb api key
+
+ended = True # allow the adding of ended shows
+
 # Optional filters
-tRatings = ''  # Only return results which have Trakt ratings within set range, e.g. 70-100
+tRatings = '70-100'  # Only return results which have Trakt ratings within set range, e.g. 70-100
 tGenres = ''  # Only return results within specified genres, e.g. action, adventure, comedy
 tLang = 'en'  # Only return results in set language, e.g en or es
 tYears = ''  # Only return results from year, or year range, e.g. 2007 or 2007-2015
@@ -33,18 +42,35 @@ tRuntimes = '30-60'  # Only return results where shows have a runtime within ran
 ################################
 
 logging.basicConfig(stream=sys.stdout, format='%(asctime)s - %(levelname)s: %(message)s', filename='sonarrPush.log',
-                    level=logging.INFO)
-sonarrHeaders = {'X-Api-Key': sonarrAPI}
-pushHeaders = {'Content-Type": "application/x-www-form-urlencoded', 'Content-Length: 180'}
-traktHeaders = {'content-type': 'application/json', 'trakt-api-version': '2', 'trakt-api-key': traktAPI, }
-options = {"ignoreEpisodesWithFiles": False, "ignoreEpisodesWithoutFiles": False, "searchForMissingEpisodes": True}
+                    level=logging.debug_level.upper())
 sent = None
 newShows = []
-delay_time = timer * 3600
+delay_time = timer * 3600 
+sonarrHeaders = {'X-Api-Key': sonarrAPI}
+traktHeaders = {'content-type': 'application/json', 'trakt-api-version': '2', 'trakt-api-key': traktAPI, }
+tvdbHeaders = {'Authorization': 'Bearer' get_tvdb_token()}
+options = {"ignoreEpisodesWithFiles": False, "ignoreEpisodesWithoutFiles": False, "searchForMissingEpisodes": True}
+
 
 ################################
 # Main
 ################################
+
+def get_tvdb_token():
+    r = requests.post('https://api.thetvdb.com/login', data={"apikey":"A9FD3F7467C44BB8"})
+    token = r.json
+    token = r.json[0]['token']
+    resp = r.status_code
+    return token if resp == 200 else logging.warning('tvdb auth failed, check api key')
+
+
+def tvdb_status(tvdb_id):
+    url = 'https://api.thetvdb.com//series/' + str(tvdb_id)
+    header = { "Accept": "application/json", 'Authorization' : 'Bearer ' + get_tvdb_token()"  }
+    r = requests.post(url, headers=header})
+    output = r.json
+    return True if 'Ended' in output[0]['data']['status']
+
 
 def send_pushover(app_token, user_token, message):
     try:
@@ -130,8 +156,9 @@ def add_shows():
     sonarr_lib()
     n = 0
     added_list = []
+    limit = 0
     for x in traktList:
-        if x['show']['ids']['tvdb'] not in tvLibList:
+        if x['show']['ids']['tvdb'] not in tvLibList and ended = True:
             title = x['show']['title']
             tvdb = x['show']['ids']['tvdb']
             try:
@@ -141,7 +168,11 @@ def add_shows():
                     logging.info(title + ' has been added to Sonarr')
                     n += 1
                     added_list.append(x['show']['title'])
-
+                    if add_limit > 0 and limit == add_limit:
+                        logging.info(str(limit) + ' shows added limit reached')
+                        break
+                    elif add_limit > 0 and not limit == add_limit:
+                        add_limit += 1
                 else:
                     logging.warning(title + ' failed to be added to Sonarr!')
             except:
@@ -163,9 +194,9 @@ def new_check():
             add_shows()
             break
     logging.info('no new shows to add, checking again in ' + str(timer) + ' hour(s)')
-    time.sleep(float(delay_time))
     logging.debug('sleping for ' + str(delay_time) + ' seconds')
-    new_check()
+    time.sleep(float(delay_time))
     logging.debug('sleep over, checking again')
+    new_check()
 
 new_check()
