@@ -1,0 +1,39 @@
+#
+# Sample service file to run Sonarr_Pusher
+#
+[Unit]
+Description=Sonarr Pusher
+After=syslog.target sonarr.service
+
+[Service]
+Type=simple
+User=user
+Group=user
+WorkingDirectory=/home/user/Sonarr_Pusher/
+Environment="trakt_type=trending"  # enter trending or anticipated
+Environment="addlimit=1"           # limit the number of added shows per run
+Environment="webhook=https://hooks.slack.com/services/XXXXXXXX/XXXXXXXXXXXXX"
+Environment="trakt_api=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+Environment="sonarr_api=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+Environment="trakt_limit=75"       # enter a value up to 100
+ExecStart=/usr/bin/python /home/user/Sonarr_Pusher/traktToSonarr.py
+StandardOutput=syslog
+StandardError=syslog
+
+[Install]
+WantedBy=multi-user.target
+
+
+
+#
+# corrisponding timer file (sonarrpush.timer)
+#
+#[Unit]
+#Description=Run sonarrpush daily
+#[Timer]
+#OnCalendar=daily
+#Persistent=true
+#OnBootSec=180
+#OnUnitActiveSec=180
+#[Install]
+#WantedBy=timers.target
