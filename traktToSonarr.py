@@ -17,15 +17,13 @@ from logging.handlers import RotatingFileHandler
 ################################
 
 timer = 0  # how often (in hours) to check for new shows and add them - use 0 to only check once
-traktAPI = ''  # API from your trakt account (client id)
-sonarrAPI = ''  # API from your sonarr install
-traktLimit = ''  # how many results to request from trakt's list
-#listName = ''  # Trending or anticipated
+traktAPI = os.environ["trakt_api"]
+sonarrAPI = os.environ["sonarr_api"]
+traktLimit = '50'  # how many results to request from trakt's list
 listNmae = os.environ["trakt_type"]
 sonarr = 'http://localhost:8989/sonarr'  # URL to sonarr install, normally localhost:8989 or localhost:8989/sonarr
-quality_profile = ''  # Sonarr quality profile to add shows under
-folder_path = ''  # root folder to download tv shows into, make sure to leave trailing / e.g /home/user/media/tv/
-#add_limit = 5  # limit the number of shows to add per cycle, use 0 for no limit
+quality_profile = 'HD - 720p/1080p'  # Sonarr quality profile to add shows under
+folder_path = '/plexmedia/media/TV Shows/'  # root folder to download tv shows into, make sure to leave trailing / e.g /home/user/media/tv/
 add_limit = os.environ["dailylimit"]
 log_level = 'info'  # set log and console output to debug or info
 
@@ -35,10 +33,9 @@ pushover_app_token = ''
 
 # Optional Slack Webhook Integration
 
-#slack_webhook_url = ''  # https://hooks.slack.com/services/XXXXXXXX/XXXXXXXX/XXXXXXXXXXXXXXXXXX
 slack_webhook_url = os.environ["webhook"]
-slack_user = 'incoming message user name'  # can be anything you like
-slack_channel = 'name_of_slack_channel'  # can be anything you like (sonarr_pusher)
+slack_user = 'bot'  # can be anything you like
+slack_channel = 'sonarr_pusher'  # can be anything you like (sonarr_pusher)
 
 # Optional tvdb extra filter
 
@@ -49,9 +46,9 @@ allow_ended = True  # allow the adding of ended shows
 # Optional filters
 tRatings = ''  # Only return results which have Trakt ratings within set range, e.g. 70-100
 tGenres = ''  # Only return results within specified genres, e.g. action, adventure, comedy
-tLang = ''  # Only return results in set language, e.g en or es
+tLang = 'en'  # Only return results in set language, e.g en or es
 tYears = ''  # Only return results from year, or year range, e.g. 2007 or 2007-2015
-tCountries = ''  # Only return results from country, e.g. us
+tCountries = 'us'  # Only return results from country, e.g. us
 tRuntimes = ''  # Only return results where shows have a runtime within range, e.g. 30-60
 
 ################################
@@ -286,7 +283,7 @@ def add_shows():
         send_pushover(pushover_app_token, pushover_user_token, "The following " + str(n) + " TV Show(s) out of " + str(
             num) + " have been added to Sonarr: " + '\n' + '\n'.join(added_list))
     if slack_webhook_url and n != 0:
-        slack_data = "The following " + str(n) + " TV Show(s) out of " + str(
+        slack_data = "The following " + str(n) + " " + listName + " TV Show(s) out of " + str(
             num) + " have been added to Sonarr: " + '\n' + '\n'.join(added_list)
         payload = {"text": slack_data, "username": slack_user, "channel": slack_channel}
         requests.post(slack_webhook_url, json.dumps(payload), headers={'content-type': 'application/json'})
