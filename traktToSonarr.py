@@ -8,6 +8,7 @@ import requests
 import time
 import logging
 import sys
+import os   
 
 from logging.handlers import RotatingFileHandler
 
@@ -19,11 +20,13 @@ timer = 0  # how often (in hours) to check for new shows and add them - use 0 to
 traktAPI = ''  # API from your trakt account (client id)
 sonarrAPI = ''  # API from your sonarr install
 traktLimit = ''  # how many results to request from trakt's list
-listName = ''  # Trending or anticipated
-sonarr = 'http://localhost:8989'  # URL to sonarr install, normally localhost:8989 or localhost:8989/sonarr
+#listName = ''  # Trending or anticipated
+listNmae = os.environ["trakt_type"]
+sonarr = 'http://localhost:8989/sonarr'  # URL to sonarr install, normally localhost:8989 or localhost:8989/sonarr
 quality_profile = ''  # Sonarr quality profile to add shows under
 folder_path = ''  # root folder to download tv shows into, make sure to leave trailing / e.g /home/user/media/tv/
-add_limit = 5  # limit the number of shows to add per cycle, use 0 for no limit
+#add_limit = 5  # limit the number of shows to add per cycle, use 0 for no limit
+add_limit = os.environ["dailylimit"]
 log_level = 'info'  # set log and console output to debug or info
 
 # Optional pushover notifications
@@ -32,7 +35,8 @@ pushover_app_token = ''
 
 # Optional Slack Webhook Integration
 
-slack_webhook_url = ''  # https://hooks.slack.com/services/XXXXXXXX/XXXXXXXX/XXXXXXXXXXXXXXXXXX
+#slack_webhook_url = ''  # https://hooks.slack.com/services/XXXXXXXX/XXXXXXXX/XXXXXXXXXXXXXXXXXX
+slack_webhook_url = os.environ["webhook"]
 slack_user = 'incoming message user name'  # can be anything you like
 slack_channel = 'name_of_slack_channel'  # can be anything you like (sonarr_pusher)
 
