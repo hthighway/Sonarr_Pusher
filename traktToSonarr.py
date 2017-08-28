@@ -24,7 +24,7 @@ listName = os.environ["trakt_type"]
 sonarr = 'http://localhost:8989/sonarr'  # URL to sonarr install, normally localhost:8989 or localhost:8989/sonarr
 quality_profile = 'HD - 720p/1080p'  # Sonarr quality profile to add shows under
 folder_path = '/plexmedia/media/TV Shows/'  # root folder to download tv shows into, make sure to leave trailing / e.g /home/user/media/tv/
-add_limit = os.environ["dailylimit"]
+add_limit = os.environ["addlimit"]
 log_level = 'debug'  # set log and console output to debug or info
 
 # Optional pushover notifications
