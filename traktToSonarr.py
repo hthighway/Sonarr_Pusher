@@ -19,7 +19,7 @@ from logging.handlers import RotatingFileHandler
 timer = 0  # how often (in hours) to check for new shows and add them - use 0 to only check once
 traktAPI = os.environ["trakt_api"]
 sonarrAPI = os.environ["sonarr_api"]
-traktLimit = '50'  # how many results to request from trakt's list
+traktLimit = os.environ["trakt_limit"]  # how many results to request from trakt's list
 listName = os.environ["trakt_type"]
 sonarr = 'http://localhost:8989/sonarr'  # URL to sonarr install, normally localhost:8989 or localhost:8989/sonarr
 quality_profile = 'HD - 720p/1080p'  # Sonarr quality profile to add shows under
